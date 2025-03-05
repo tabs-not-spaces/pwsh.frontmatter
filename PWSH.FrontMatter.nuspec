@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<package>
+  <metadata>
+    <id>PWSH.FrontMatter</id>
+    <version>1.0.0.420</version>
+    <authors>Ben Reader</authors>
+    <owners>Ben Reader</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Convert and manage "Front Matter" in your markdown files with ease.</description>
+    <releaseNotes>
+    </releaseNotes>
+    <copyright>Copyright © Ben Reader</copyright>
+    <tags>frontmatter,pwsh</tags>
+  </metadata>
+</package>
