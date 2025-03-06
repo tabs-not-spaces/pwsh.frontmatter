@@ -10,7 +10,7 @@
         PSData = @{
             Tags = @('frontmatter', 'pwsh')
             LicenseUri = 'https://opensource.org/licenses/MIT'
-            ProjectUri = 'https://github.com/your-repo'
+            ProjectUri = 'https://github.com/tabs-not-spaces/pwsh.frontmatter'
             IconUri = 'https://example.com/icon.png'
         }
     }
