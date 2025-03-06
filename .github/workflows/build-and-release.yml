@@ -1,0 +1,35 @@
+name: build and release
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+  
+    - name: Run build
+      env:
+        GITHUB_RUN_NUMBER: ${{ github.run_number }}
+      run: |
+        . ${{ github.workspace }}/build.ps1 -Verbose
+      shell: pwsh
+    
+    - name: publish to PSGallery
+      env:
+        NUGET_KEY: ${{ secrets.NUGET_KEY }}
+      shell: pwsh
+      run: |
+        Get-ChildItem "${{ github.workspace }}/bin/release/pwsh.frontmatter" -recurse
+        Publish-Module -Path "${{ github.workspace }}bin/release/pwsh.frontmatter" -NuGetApiKey $env:NUGET_KEY -Verbose
+    
+    - name: Archive current build
+      uses: actions/upload-artifact@v4
+      with:
+        name: builtModule
+        path: "${{ github.workspace }}/bin/release/pwsh.frontmatter"
