@@ -6,9 +6,9 @@ function Get-FrontMatterType {
     )
     $content = Get-Content -Path $FilePath -Raw
     $type = switch -Regex ($content) {
-        '---'    { 'yaml'; break }
-        '\+\+\+' { 'toml'; break }
-        '{'      { 'json'; break }
+        '^---'    { 'yaml'; break }
+        '^\+\+\+' { 'toml'; break }
+        '^{'      { 'json'; break }
         default  { throw 'Front matter type not detected.' }
     }
     Write-Verbose "Front matter type detected: $type"
