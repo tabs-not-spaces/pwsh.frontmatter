@@ -26,7 +26,7 @@ jobs:
       shell: pwsh
       run: |
         Get-ChildItem "${{ github.workspace }}/bin/release/pwsh.frontmatter" -recurse
-        Publish-Module -Path "${{ github.workspace }}bin/release/pwsh.frontmatter" -NuGetApiKey $env:NUGET_KEY -Verbose
+        Publish-Module -Path "${{ github.workspace }}/bin/release/pwsh.frontmatter" -NuGetApiKey $env:NUGET_KEY -Verbose
     
     - name: Archive current build
       uses: actions/upload-artifact@v4
