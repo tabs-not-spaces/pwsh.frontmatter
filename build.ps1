@@ -78,6 +78,9 @@ $($previousVersion.releaseNotes)
     Update-ModuleManifest @Manifest
 }
 catch {
-    Write-Error -ErrorRecord $_
+    # Continue, so the Stop preference does not turn this into a throw that skips exit 1.
+    Write-Error -ErrorRecord $_ -ErrorAction Continue
     exit 1
 }
+# Set $LASTEXITCODE explicitly. Callers that use & get $null otherwise.
+exit 0
