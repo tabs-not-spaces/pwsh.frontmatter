@@ -6,16 +6,17 @@ function ConvertFrom-JsonFrontMatter {
         [System.IO.FileInfo]$InputFile
     )
 
-    $content = Get-Content -Path $InputFile
-    # Use regex to extract a JSON block at the beginning of the input.
-    $jsonPattern = '^\s*(\{.*?\})'
-    $match = [regex]::Match($Content, $jsonPattern, [System.Text.RegularExpressions.RegexOptions]::Singleline)
-    if (-not $match.Success) {
+    # -Raw keeps the real line structure; without it the content arrives as a
+    # string array that gets space joined before anything can parse it.
+    $content = Get-Content -LiteralPath $InputFile.FullName -Raw
+    $openIndex = if ($content) { $content.IndexOf('{') } else { -1 }
+    $closeIndex = if ($openIndex -ge 0) { Find-FrontMatterJsonBlockEnd -Content $content -StartIndex $openIndex } else { -1 }
+    if ($openIndex -lt 0 -or $closeIndex -lt 0) {
         Write-Error 'Unable to locate JSON frontmatter in the file.'
         return
     }
 
-    $jsonBlock = $match.Groups[1].Value
+    $jsonBlock = $content.Substring($openIndex, ($closeIndex - $openIndex + 1))
 
     try {
         $data = $jsonBlock | ConvertFrom-Json

@@ -9,13 +9,20 @@ function ConvertTo-YamlFrontMatter {
     $yamlLines += '---'
     foreach ($prop in $FrontMatter.PSObject.Properties) {
         $key = $prop.Name
+        Assert-FrontMatterKey -Key $key -Format 'yaml'
         $value = $prop.Value
-        if ($value -is [Array]) {
+        if ($value -is [Array] -and $value.Count -eq 0) {
+            # Flow style, so an empty array is not confused with an empty
+            # string on the way back in.
+            $yamlLines += "$key`: []"
+        }
+        elseif ($value -is [Array]) {
             $yamlLines += "$key`:"
             foreach ($item in $value) {
-                # Wrap string items in quotes and escape any embedded quotes
+                # Always quote and escape string items so no value can break
+                # out of its own line and forge keys or close the block.
                 if ($item -is [string]) {
-                    $formattedItem = '"' + $item.Replace('"', '\"') + '"'
+                    $formattedItem = ConvertTo-FrontMatterScalar -Value $item -Format 'yaml'
                 }
                 else {
                     $formattedItem = $item
@@ -25,13 +32,7 @@ function ConvertTo-YamlFrontMatter {
         }
         else {
             if ($value -is [string]) {
-                # If the string contains special characters or spaces, wrap in quotes
-                if ($value -match '[:\s]') {
-                    $formattedValue = '"' + $value.Replace('"', '\"') + '"'
-                }
-                else {
-                    $formattedValue = $value
-                }
+                $formattedValue = ConvertTo-FrontMatterScalar -Value $value -Format 'yaml'
             }
             else {
                 $formattedValue = $value

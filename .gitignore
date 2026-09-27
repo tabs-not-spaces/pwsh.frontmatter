@@ -1,1 +1,4 @@
 /bin/*
+tests/testResults.xml
+# copilot-swarm local agent memory (synced via OneDrive, never committed)
+.agents/

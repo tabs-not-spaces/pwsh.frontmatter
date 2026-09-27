@@ -5,8 +5,8 @@ function ConvertFrom-TomlFrontMatter {
         [Parameter(Mandatory = $true)]
         [System.IO.FileInfo]$InputFile
     )
-    
-    $content = Get-Content $InputFile
+
+    $content = Get-Content -LiteralPath $InputFile.FullName
     $startIndex = $null
     $endIndex = $null
 
@@ -14,7 +14,7 @@ function ConvertFrom-TomlFrontMatter {
     for ($i = 0; $i -lt $content.Count; $i++) {
         if ($content[$i].Trim() -eq '+++') {
             if ($null -eq $startIndex) { $startIndex = $i }
-            else { $endIndex = $i; break }  
+            else { $endIndex = $i; break }
         }
     }
 
@@ -25,29 +25,32 @@ function ConvertFrom-TomlFrontMatter {
 
     # Extract the frontmatter lines (excluding the marker lines)
     $frontmatterLines = $content[($startIndex + 1)..($endIndex - 1)]
-    $properties = @{}
+    $properties = [System.Collections.Specialized.OrderedDictionary]::new()
 
     foreach ($line in $frontmatterLines) {
         $line = $line.Trim()
+        if ($line -match '^\s*#') { continue }
         $fmLineRegex = '^(?<key>[^=\s]+)\s*=\s*(?<value>.+)$'
         if (-not [string]::IsNullOrWhiteSpace($line) -and $line -match $fmLineRegex) {
             $key = $Matches['key']
-            $value = $Matches['value'].Trim()
+            $rawValue = $Matches['value'].Trim()
 
-            # Remove quotes if present
-            $value = Convert-FrontMatterValue -Value $value
-            
             # Handle array values (e.g. [ "PowerBI", "Graph", "Intune" ])
+            # before unquoting, so an empty array stays an empty array.
             $fmArrayRegex = '^\[(.*)\]$'
-            if ($value -match $fmArrayRegex) {
-                $inner = $Matches[1]
-                $value = $inner -split ',' | ForEach-Object {
-                    Convert-FrontMatterValue -Value $_.trim()
+            if ($rawValue -match $fmArrayRegex) {
+                $inner = $Matches[1].Trim()
+                if ([string]::IsNullOrWhiteSpace($inner)) {
+                    $value = @()
+                }
+                else {
+                    $value = @(Split-FrontMatterArray -Value $inner | ForEach-Object {
+                            Convert-FrontMatterValue -Value $_.Trim()
+                        })
                 }
             }
-            # Try converting to an integer if applicable
-            elseif ($value -as [int] -and $value -match '^\d+$') {
-                $value = [int]$value
+            else {
+                $value = Convert-FrontMatterValue -Value $rawValue
             }
             $properties[$key] = $value
         }
