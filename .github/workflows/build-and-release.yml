@@ -1,35 +1,110 @@
 name: build and release
 
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 on:
   workflow_dispatch:
   push:
     branches:
       - main
 
+env:
+  # Pester gate runs the full suite with no tag exclusions. Do not add an
+  # exclusion here to make a red build green. Fix the test or the code.
+  PESTER_EXCLUDE_TAGS: ""
+
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
-  
+    - name: Checkout
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
     - name: Run build
       env:
         GITHUB_RUN_NUMBER: ${{ github.run_number }}
-      run: |
-        . ${{ github.workspace }}/build.ps1 -Verbose
       shell: pwsh
-    
-    - name: publish to PSGallery
+      run: |
+        $ErrorActionPreference = 'Stop'
+        & "${{ github.workspace }}/build.ps1" -Verbose
+        if ($LASTEXITCODE -ne 0) {
+          Write-Error "build.ps1 exited with code $LASTEXITCODE"
+          exit $LASTEXITCODE
+        }
+
+    - name: Install Pester
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = 'Stop'
+        Install-Module -Name Pester -RequiredVersion 5.7.1 -Force -SkipPublisherCheck -Scope CurrentUser
+
+    - name: Run Pester tests
+      shell: pwsh
+      working-directory: ${{ github.workspace }}/tests
+      env:
+        PESTER_EXCLUDE_TAGS: ${{ env.PESTER_EXCLUDE_TAGS }}
+      run: |
+        $ErrorActionPreference = 'Stop'
+        Import-Module Pester -MinimumVersion 5.7.1 -Force
+
+        $configData = Import-PowerShellDataFile -Path './PesterConfiguration.psd1'
+        $config = New-PesterConfiguration -Hashtable $configData
+
+        # Single, clearly-commented exclusion point. See the workflow-level
+        # PESTER_EXCLUDE_TAGS comment above for why this exists.
+        $excludeTags = @($env:PESTER_EXCLUDE_TAGS -split ',' | Where-Object { $_ })
+        if ($excludeTags.Count -gt 0) {
+          $config.Filter.ExcludeTag = $excludeTags
+        }
+
+        # Run.Exit makes Invoke-Pester call exit with a non-zero code itself
+        # when any test fails, so a failed gate stops the job here and the
+        # publish job (which needs: build) never runs.
+        $config.Run.Exit = $true
+
+        Invoke-Pester -Configuration $config
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: pester-test-results
+        path: ${{ github.workspace }}/tests/testResults.xml
+
+    - name: Archive built module
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: builtModule
+        path: ${{ github.workspace }}/bin/release/pwsh.frontmatter
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    # Publish only ever runs from main, so a workflow_dispatch against an
+    # arbitrary branch cannot push that branch's code to the Gallery.
+    if: github.ref == 'refs/heads/main'
+    environment: psgallery
+    permissions:
+      contents: read
+
+    steps:
+    - name: Download built module
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      with:
+        name: builtModule
+        path: ${{ github.workspace }}/bin/release/pwsh.frontmatter
+
+    - name: Publish to PSGallery
       env:
         NUGET_KEY: ${{ secrets.NUGET_KEY }}
       shell: pwsh
       run: |
-        Get-ChildItem "${{ github.workspace }}/bin/release/pwsh.frontmatter" -recurse
-        Publish-Module -Path "${{ github.workspace }}/bin/release/pwsh.frontmatter" -NuGetApiKey $env:NUGET_KEY -Verbose
-    
-    - name: Archive current build
-      uses: actions/upload-artifact@v4
-      with:
-        name: builtModule
-        path: "${{ github.workspace }}/bin/release/pwsh.frontmatter"
+        $ErrorActionPreference = 'Stop'
+        Get-ChildItem "${{ github.workspace }}/bin/release/pwsh.frontmatter" -Recurse
+        Publish-Module -Path "${{ github.workspace }}/bin/release/pwsh.frontmatter" -NuGetApiKey $env:NUGET_KEY

@@ -10,6 +10,8 @@ param (
     [bool]$CleanBuildDirectory = $true
 )
 
+$ErrorActionPreference = 'Stop'
+
 try {
     #region Generate a new version number
     $moduleName = Split-Path -Path $ModulePath -Leaf
@@ -64,7 +66,7 @@ $($previousVersion.releaseNotes)
         New-Item -Path $relPath -ItemType Directory -Force | Out-Null
     }
 
-    Copy-Item -Path "$ModulePath/*" -Destination "$relPath" -Recurse -Exclude ".gitKeep", "releaseNotes.txt", "description.txt"
+    Copy-Item -Path "$ModulePath/*" -Destination "$relPath" -Recurse -Exclude ".gitKeep", "releaseNotes.txt", "description.txt", "README.md"
 
     $Manifest = @{
         Path              = "$relPath/$moduleName.psd1"
@@ -76,5 +78,6 @@ $($previousVersion.releaseNotes)
     Update-ModuleManifest @Manifest
 }
 catch {
-    $_
+    Write-Error -ErrorRecord $_
+    exit 1
 }
