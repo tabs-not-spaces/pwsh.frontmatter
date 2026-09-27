@@ -1,1 +1,1 @@
-Convert and manage "Front Matter" in your markdown files with ease.
+Read, write and convert yaml, toml and json front matter blocks in markdown files. Requires PowerShell 7.0 or later.
