@@ -10,27 +10,24 @@ function Find-FrontMatterPositionBounds {
     )
     $startIndex = $null
     $endIndex = $null
+    $lines = @($Content)
     if ($startMarker -eq '{') {
-        # For JSON front matter, use a brace counter to find matching closing brace.
-        $braceCount = 0
-        for ($i = 0; $i -lt $content.Count; $i++) {
-            $line = $content[$i].Trim()
-            if ($line -eq $startMarker) {
-                if ($braceCount -eq 0) { $startIndex = $i }
-                $braceCount++
-            }
-            if ($line -eq $endMarker -and $braceCount -gt 0) {
-                $braceCount--
-                if ($braceCount -eq 0) {
-                    $endIndex = $i
-                    break
-                }
+        # For JSON front matter, brace count over the whole block so a brace
+        # that shares a line with its key is still counted, then map the
+        # character offsets back to line indexes.
+        $joined = $lines -join "`n"
+        $openOffset = $joined.IndexOf($StartMarker)
+        if ($openOffset -ge 0) {
+            $closeOffset = Find-FrontMatterJsonBlockEnd -Content $joined -StartIndex $openOffset
+            if ($closeOffset -ge 0 -and $joined[$closeOffset] -eq $EndMarker) {
+                $startIndex = ($joined.Substring(0, $openOffset) -split "`n").Count - 1
+                $endIndex = ($joined.Substring(0, $closeOffset) -split "`n").Count - 1
             }
         }
     }
     else {
-        for ($i = 0; $i -lt $content.Count; $i++) {
-            if ($content[$i].Trim() -eq $startMarker) {
+        for ($i = 0; $i -lt $lines.Count; $i++) {
+            if ($lines[$i].Trim() -eq $startMarker) {
                 if ($null -eq $startIndex) { $startIndex = $i }
                 else { $endIndex = $i; break }
             }

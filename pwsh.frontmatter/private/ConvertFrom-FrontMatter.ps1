@@ -3,7 +3,7 @@ function ConvertFrom-FrontMatter {
     [OutputType([PSCustomObject])]
     param (
         [Parameter(Mandatory = $true)]
-        [ValidateScript({ Test-Path $_ -PathType Leaf })]
+        [ValidateScript({ Test-Path -LiteralPath $_ -PathType Leaf })]
         [ValidateScript({ $_ -match '\.md$'})]
         [string]$FilePath,
 

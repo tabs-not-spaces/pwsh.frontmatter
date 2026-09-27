@@ -12,8 +12,9 @@ function ConvertTo-TomlFrontMatter {
         $value = $prop.Value
         if ($value -is [Array]) {
             $formattedItems = $value | ForEach-Object {
+                # Always quote and escape string items, see ConvertTo-FrontMatterScalar.
                 if ($_ -is [string]) {
-                    '"' + ($_ -replace '"', '\"') + '"'
+                    ConvertTo-FrontMatterScalar -Value $_ -Format 'toml'
                 }
                 else {
                     $_
@@ -24,7 +25,7 @@ function ConvertTo-TomlFrontMatter {
         }
         else {
             if ($value -is [string]) {
-                $formattedValue = '"' + ($value -replace '"', '\"') + '"'
+                $formattedValue = ConvertTo-FrontMatterScalar -Value $value -Format 'toml'
             }
             else {
                 $formattedValue = $value
