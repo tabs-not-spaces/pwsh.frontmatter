@@ -44,7 +44,7 @@ function ConvertFrom-TomlFrontMatter {
                     $value = @()
                 }
                 else {
-                    $value = @($inner -split ',' | ForEach-Object {
+                    $value = @(Split-FrontMatterArray -Value $inner | ForEach-Object {
                             Convert-FrontMatterValue -Value $_.Trim()
                         })
                 }

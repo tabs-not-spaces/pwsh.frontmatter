@@ -110,6 +110,10 @@ Know these before you run the module over content you care about.
   in the source file to keep it a string.
 - Property lookup on the returned object is case insensitive, so two keys that
   differ only by case collide. Key order is preserved.
+- yaml and toml keys are written unquoted, so `Set-FrontMatter` and
+  `Convert-FrontMatter` reject keys that could change the block structure. toml keys allow only letters, digits,
+  `_` and `-`. yaml keys must start with a letter, digit or `_` and may also
+  contain `.`, `-` and single spaces. json keys are not restricted.
 - `Set-FrontMatter` requires a `.md` extension. `.markdown` and `.mdx` are
   rejected.
 - `-FilePath` rejects the wildcard metacharacters `*` and `?` on both read and

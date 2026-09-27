@@ -9,6 +9,7 @@ function ConvertTo-YamlFrontMatter {
     $yamlLines += '---'
     foreach ($prop in $FrontMatter.PSObject.Properties) {
         $key = $prop.Name
+        Assert-FrontMatterKey -Key $key -Format 'yaml'
         $value = $prop.Value
         if ($value -is [Array] -and $value.Count -eq 0) {
             # Flow style, so an empty array is not confused with an empty

@@ -106,6 +106,12 @@ function Set-FrontMatter {
         Set-FrontMatter rewrites the file in place and keeps no backup. Commit
         your work or run with -WhatIf first when you are unsure.
 
+        Property names are written unquoted, so Set-FrontMatter rejects any key
+        that could change the block structure. TOML keys must contain only
+        letters, digits, underscores and hyphens. YAML keys must start with a
+        letter, digit or underscore, and may also contain dots, hyphens and
+        single spaces between words. JSON keys are not restricted.
+
     .LINK
         Get-FrontMatter
 
@@ -185,7 +191,9 @@ function Set-FrontMatter {
         for ($i = $startLine; $i -le $endLine; $i++) { $blockLength += $rawLines[$i].Length }
 
         # Preserve the file's dominant line ending and its trailing break.
-        $newLine = if ($content -match "`r`n") { "`r`n" } else { "`n" }
+        $crlfCount = [regex]::Matches($content, "`r`n").Count
+        $lfCount = [regex]::Matches($content, "(?<!`r)`n").Count
+        $newLine = if ($crlfCount -gt $lfCount) { "`r`n" } else { "`n" }
         $blockTail = if ($rawLines[$endLine] -match "\r?\n$") { $newLine } else { '' }
         $normalized = ($newFrontMatter -replace "`r`n", "`n") -replace "`n", $newLine
 
@@ -199,10 +207,28 @@ function Set-FrontMatter {
             $bytes = [System.IO.File]::ReadAllBytes($resolvedPath)
             $hasBom = $bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF
             $encoding = [System.Text.UTF8Encoding]::new($hasBom)
-            $tempPath = "$resolvedPath.tmp"
-            [System.IO.File]::WriteAllText($tempPath, $newContent, $encoding)
-            # Move with overwrite is a rename, so the swap is atomic.
-            [System.IO.File]::Move($tempPath, $resolvedPath, $true)
+            # A unique sidecar in the same directory keeps the rename on one
+            # volume and stops concurrent calls or stale files colliding.
+            $tempPath = Join-Path ([System.IO.Path]::GetDirectoryName($resolvedPath)) ('.{0}.{1}.tmp' -f [System.IO.Path]::GetFileName($resolvedPath), [guid]::NewGuid().ToString('N'))
+            try {
+                $writer = $null
+                $stream = [System.IO.FileStream]::new($tempPath, [System.IO.FileMode]::CreateNew, [System.IO.FileAccess]::Write)
+                try {
+                    $writer = [System.IO.StreamWriter]::new($stream, $encoding)
+                    $writer.Write($newContent)
+                    $writer.Flush()
+                }
+                finally {
+                    if ($writer) { $writer.Dispose() } else { $stream.Dispose() }
+                }
+                # Move with overwrite is a rename, so the swap is atomic.
+                [System.IO.File]::Move($tempPath, $resolvedPath, $true)
+            }
+            finally {
+                if (Test-Path -LiteralPath $tempPath) {
+                    Remove-Item -LiteralPath $tempPath -Force -ErrorAction SilentlyContinue
+                }
+            }
         }
     }
 }

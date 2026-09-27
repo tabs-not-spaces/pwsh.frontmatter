@@ -9,6 +9,7 @@ function ConvertTo-TomlFrontMatter {
     $tomlLines += '+++'
     foreach ($prop in $FrontMatter.PSObject.Properties) {
         $key = $prop.Name
+        Assert-FrontMatterKey -Key $key -Format 'toml'
         $value = $prop.Value
         if ($value -is [Array]) {
             $formattedItems = $value | ForEach-Object {

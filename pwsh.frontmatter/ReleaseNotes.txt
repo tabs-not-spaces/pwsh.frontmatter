@@ -12,6 +12,10 @@ Security and correctness release. Read the breaking changes before you upgrade.
   Automation that runs under a global $ConfirmPreference of High now prompts.
 - Pipeline input to Set-FrontMatter and Convert-FrontMatter now processes every
   object. Previously only the last object was handled.
+- YAML and TOML output from Set-FrontMatter and Convert-FrontMatter now rejects
+  property names that could forge keys or close the block, such as names
+  containing a newline, ':' or '='. TOML keys are limited to letters, digits,
+  underscores and hyphens.
 - The manifest now declares PowerShellVersion 7.0 and exports only
   Get-FrontMatter, Set-FrontMatter and Convert-FrontMatter. Private helpers are
   no longer visible.
@@ -31,9 +35,12 @@ Security and correctness release. Read the breaking changes before you upgrade.
 - The YAML parser skips comments, keeps key order, and no longer promotes nested
   keys to the top level.
 - Only whole numbers are promoted to [int]. Quoted values always stay strings.
-- Writes preserve the original byte order mark and line endings, and go through
-  a temporary file that is moved over the original, so an interrupted write
-  cannot leave a half rewritten document.
+- TOML arrays split only on commas outside quoted strings, so an item such as
+  "a,b" reads back as one item.
+- Writes preserve the original byte order mark and the dominant line ending,
+  and go through a uniquely named temporary file that is moved over the
+  original, so an interrupted or concurrent write cannot leave a half
+  rewritten document or clobber an unrelated file.
 
 ### Docs
 
