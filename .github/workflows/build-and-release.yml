@@ -32,6 +32,7 @@ jobs:
       shell: pwsh
       run: |
         $ErrorActionPreference = 'Stop'
+        $global:LASTEXITCODE = 0
         & "${{ github.workspace }}/build.ps1" -Verbose
         if ($LASTEXITCODE -ne 0) {
           Write-Error "build.ps1 exited with code $LASTEXITCODE"
